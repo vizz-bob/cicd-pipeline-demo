@@ -8,7 +8,7 @@ const VERSION = '1.0.0';
 
 app.get('/', (req, res) => {
   res.json({
-    message: 'Hello from the DevOps demo app Tutorial from Vinzap !!',
+    message: 'Hello from the DevOps demo app Tutorial from Vinzap by Vijayendra Singh',
     version: VERSION,
     hostname: os.hostname(),
     servedAt: new Date().toISOString()
