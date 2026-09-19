@@ -2,15 +2,23 @@ name: Deploy to EC2
 
 on:
   workflow_run:
-    workflows: ["Docker Image CI"]
+    workflows:
+      - Docker Image CI
     types:
       - completed
 
 jobs:
   deploy:
-    runs-on: self-hosted
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: self-hosted
+
     steps:
+      - name: Show runner information
+        run: |
+          echo "Runner: $RUNNER_NAME"
+          echo "OS: $RUNNER_OS"
+          echo "Architecture: $RUNNER_ARCH"
+
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -18,12 +26,31 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Pull latest image
-        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cicd-pipeline-demo:latest
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cicd-pipeline-demo:latest
 
-      - name: Stop and remove old container
+      - name: Stop old container
         run: |
           docker stop cicd-app || true
+
+      - name: Remove old container
+        run: |
           docker rm cicd-app || true
 
       - name: Run new container
-        run: docker run -d -p 8080:8080 --name cicd-app ${{ secrets.DOCKERHUB_USERNAME }}/cicd-pipeline-demo:latest
+        run: |
+          docker run -d \
+            --restart unless-stopped \
+            -p 8080:8080 \
+            --name cicd-app \
+            ${{ secrets.DOCKERHUB_USERNAME }}/cicd-pipeline-demo:latest
+
+      - name: Check container
+        run: |
+          docker ps
+          docker logs --tail 50 cicd-app
+
+      - name: Test application
+        run: |
+          sleep 5
+          curl -f http://localhost:8080/ || exit 1
